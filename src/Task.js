@@ -37,7 +37,7 @@ export default function Task({ title, problem, vars, calcs, defaultUnits }) {
         <Text>{problem}</Text>
         <Flex>
           {Object.keys(vars).map((varn, i) => (
-            <Box key={i} ml={i == 0 ? 0 : 2} pt={2} width={[1, 1 / 6]}>
+            <Box key={i} ml={i === 0 ? 0 : 2} pt={2} width={[1, 1 / 6]}>
               <Label htmlFor={varn + title} width={1}>
                 ${varn.toUpperCase()}
                 {calcs[varn] && typeof calcState[varn] == "object" && (
