@@ -13,6 +13,10 @@ let parseIntList = (val) => {
     .filter((v) => !isNaN(v));
 };
 
+let parseQtyList = (val) => {
+  return val.split(",").map((v) => Qty(v));
+};
+
 const TASKS = [
   <Task
     title={"Transfer Speed"}
@@ -140,7 +144,7 @@ const TASKS = [
         frames = parseIntList(frames);
         priorities = parseIntList(priorities);
         framerate = Qty(framerate);
-        if (frames.length != priorities.length) return 0;
+        if (frames.length !== priorities.length) return 0;
         let delays = [];
         if (!interleaved) {
           let curDelay = null;
@@ -162,13 +166,15 @@ const TASKS = [
             .sort((a, b) => priorities[b[0]] - priorities[a[0]]);
           while (remainingFrameCnts.length > 0) {
             let highestPri = remainingFrameCnts[0][2];
-            for (let [frameIdx, _, pri] of remainingFrameCnts) {
-              let frameObj = remainingFrameCnts.find((rf) => rf[0] == frameIdx);
-              if (pri != highestPri) continue;
+            for (let [frameIdx, , pri] of remainingFrameCnts) {
+              let frameObj = remainingFrameCnts.find(
+                (rf) => rf[0] === frameIdx
+              );
+              if (pri !== highestPri) continue;
               frameObj[1]--;
-              if (frameObj[1] == 0) {
+              if (frameObj[1] === 0) {
                 remainingFrameCnts = remainingFrameCnts.filter(
-                  (rf) => rf[0] != frameIdx
+                  (rf) => rf[0] !== frameIdx
                 );
               }
               if (curDelay !== null) {
@@ -190,6 +196,55 @@ const TASKS = [
       },
     }}
     defaultUnits={{ delays: "second", avgdelay: "second" }}
+  />,
+  <Task
+    title={"HTTP, Response Time"}
+    problem={
+      "If $PAYLOADS are sent from the server with an $RTT over $PARALLEL $RATE connections, it will take $TIMES ($AVGTIME)."
+    }
+    vars={{
+      payloads: "1kb,5kb,5kb,5kb,5kb,5kb,5kb,5kb,5kb",
+      rtt: "500 ms",
+      parallel: "1",
+      persistent: "no",
+      rate: "1 kb/ms",
+      times: null,
+      avgtime: null,
+    }}
+    calcs={{
+      times: ({ payloads, rtt, parallel, rate, persistent }) => {
+        payloads = parseQtyList(payloads);
+        rtt = Qty(rtt);
+        parallel = parseInt(parallel);
+        persistent = isTruthy(persistent);
+        rate = Qty(rate);
+        let times = [];
+        if (parallel !== 1) return "TODO";
+        if (!persistent) {
+          let curTime = null;
+          let i = 0;
+          for (let p of payloads) {
+            let pTime = p.div(rate).add(rtt.mul(2));
+            if (curTime == null) {
+              curTime = pTime;
+            } else {
+              curTime = curTime.add(pTime);
+            }
+            times[i++] = curTime;
+          }
+        } else {
+          return "TODO";
+        }
+        return times;
+      },
+      avgtime: ({ payloads, rtt, parallel, rate, persistent, calcs }) => {
+        return calcs
+          .times({ payloads, rtt, parallel, rate, persistent })
+          .reduce((acc, cur) => acc.add(cur))
+          .div(payloads.split(",").length);
+      },
+    }}
+    defaultUnits={{ times: "second", avgtime: "second" }}
   />,
 ];
 
