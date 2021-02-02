@@ -18,7 +18,7 @@ let getUnits = (kind) => {
     }
   }
   let units = Qty.getUnits(kind);
-  if (kind == "time") {
+  if (kind === "time") {
     units.push("millisecond");
   }
   return units;
