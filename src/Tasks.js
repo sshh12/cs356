@@ -2,6 +2,17 @@ import Task from "./Task";
 import Qty from "js-quantities";
 import binpmf from "@stdlib/stats/base/dists/binomial/pmf";
 
+let isTruthy = (val) => {
+  return ["y", "yes", "1", "enabled"].includes(val);
+};
+
+let parseIntList = (val) => {
+  return val
+    .split(",")
+    .map((v) => parseInt(v))
+    .filter((v) => !isNaN(v));
+};
+
 const TASKS = [
   <Task
     title={"Transfer Speed"}
@@ -31,11 +42,8 @@ const TASKS = [
         size = Qty(size);
         return size.mul(avgarrival).div(rate).scalar;
       },
-      qstatus: ({ rate, avgarrival, size }) => {
-        rate = Qty(rate);
-        avgarrival = Qty(avgarrival);
-        size = Qty(size);
-        let val = size.mul(avgarrival).div(rate).scalar;
+      qstatus: ({ rate, avgarrival, size, calcs }) => {
+        let val = calcs.qdelay({ rate, avgarrival, size });
         if (val < 0.7) {
           return "SMALL";
         } else if (val <= 1) {
@@ -112,6 +120,76 @@ const TASKS = [
       },
     }}
     defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"HTTP/2, Server Delay"}
+    problem={
+      "If a $FRAMES with $PRIORITIES are sent over HTTP/2 with $FRAMERATE time per frame, the delays will be $DELAYS respectively ($AVGDELAY)"
+    }
+    vars={{
+      frames: "2000,3,3,3,3,3",
+      priorities: "1,1,1,1,1,1",
+      framerate: "1ms",
+      interleaved: "yes",
+      delays: null,
+      avgdelay: null,
+    }}
+    calcs={{
+      delays: ({ frames, priorities, framerate, interleaved }) => {
+        interleaved = isTruthy(interleaved);
+        frames = parseIntList(frames);
+        priorities = parseIntList(priorities);
+        framerate = Qty(framerate);
+        if (frames.length != priorities.length) return 0;
+        let delays = [];
+        if (!interleaved) {
+          let curDelay = null;
+          let orderedFrames = frames
+            .map((f, i) => [i, f])
+            .sort((a, b) => priorities[b[0]] - priorities[a[0]]);
+          for (let [frameIdx, frameCnt] of orderedFrames) {
+            if (curDelay !== null) {
+              curDelay = framerate.mul(frameCnt).add(curDelay);
+            } else {
+              curDelay = framerate.mul(frameCnt);
+            }
+            delays[frameIdx] = curDelay;
+          }
+        } else {
+          let curDelay = null;
+          let remainingFrameCnts = frames
+            .map((f, i) => [i, f, priorities[i]])
+            .sort((a, b) => priorities[b[0]] - priorities[a[0]]);
+          while (remainingFrameCnts.length > 0) {
+            let highestPri = remainingFrameCnts[0][2];
+            for (let [frameIdx, _, pri] of remainingFrameCnts) {
+              let frameObj = remainingFrameCnts.find((rf) => rf[0] == frameIdx);
+              if (pri != highestPri) continue;
+              frameObj[1]--;
+              if (frameObj[1] == 0) {
+                remainingFrameCnts = remainingFrameCnts.filter(
+                  (rf) => rf[0] != frameIdx
+                );
+              }
+              if (curDelay !== null) {
+                curDelay = framerate.mul(1).add(curDelay);
+              } else {
+                curDelay = framerate.mul(1);
+              }
+              delays[frameIdx] = curDelay;
+            }
+          }
+        }
+        return delays;
+      },
+      avgdelay: ({ frames, priorities, framerate, interleaved, calcs }) => {
+        return calcs
+          .delays({ frames, priorities, framerate, interleaved })
+          .reduce((acc, cur) => acc.add(cur))
+          .div(frames.split(",").length);
+      },
+    }}
+    defaultUnits={{ delays: "second", avgdelay: "second" }}
   />,
 ];
 

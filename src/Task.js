@@ -3,25 +3,52 @@ import { Box, Heading, Text, Card, Flex } from "rebass";
 import { Label, Input, Select } from "@rebass/forms";
 import Qty from "js-quantities";
 
+let getUnits = (kind) => {
+  if (typeof kind !== "string") {
+    if (typeof kind == "object") {
+      if (kind.length && kind.length > 0) {
+        kind = kind[0].kind();
+      } else if (typeof kind.length === "undefined") {
+        kind = kind.kind();
+      } else {
+        kind = "unitless";
+      }
+    } else if (typeof kind == "number") {
+      kind = "unitless";
+    }
+  }
+  let units = Qty.getUnits(kind);
+  if (kind == "time") {
+    units.push("millisecond");
+  }
+  return units;
+};
+
+let tryUnitCvt = (val, units) => {
+  try {
+    if (val.length) {
+      return val.map((v) => v.to(units).toString()).join(", ");
+    }
+    return val.to(units).toString();
+  } catch (e) {
+    console.log("!!!!", val);
+    return "";
+  }
+};
+
 export default function Task({ title, problem, vars, calcs, defaultUnits }) {
   let [state, setState] = useState(vars);
   let [units, setUnits] = useState(defaultUnits);
   let calcState = JSON.parse(JSON.stringify(state));
   for (let calcKey in calcs) {
     try {
-      calcState[calcKey] = calcs[calcKey](calcState);
+      calcState[calcKey] = calcs[calcKey]({ ...calcState, calcs });
     } catch (err) {
       console.warn(err);
       calcState[calcKey] = "";
     }
   }
-  let tryCvt = (q, u) => {
-    try {
-      return q.to(u).toString();
-    } catch (e) {
-      return "";
-    }
-  };
+
   return (
     <Card
       sx={{
@@ -57,7 +84,7 @@ export default function Task({ title, problem, vars, calcs, defaultUnits }) {
                       })
                     }
                   >
-                    {Qty.getUnits(calcState[varn].kind()).map((unit) => (
+                    {getUnits(calcState[varn]).map((unit) => (
                       <option key={unit}>{unit}</option>
                     ))}
                   </Select>
@@ -70,7 +97,7 @@ export default function Task({ title, problem, vars, calcs, defaultUnits }) {
                 defaultValue={vars[varn] || null}
                 value={
                   typeof calcState[varn] == "object"
-                    ? tryCvt(calcState[varn], units[varn])
+                    ? tryUnitCvt(calcState[varn], units[varn])
                     : calcState[varn] || ""
                 }
                 onChange={(evt) =>
