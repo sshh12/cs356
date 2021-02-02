@@ -128,7 +128,7 @@ const TASKS = [
   <Task
     title={"HTTP/2, Server Delay"}
     problem={
-      "If a $FRAMES with $PRIORITIES are sent over HTTP/2 with $FRAMERATE time per frame, the delays will be $DELAYS respectively ($AVGDELAY)"
+      "If $FRAMES with $PRIORITIES are sent over HTTP/2 with $FRAMERATE time per frame, the delays will be $DELAYS respectively ($AVGDELAY)"
     }
     vars={{
       frames: "2000,3,3,3,3,3",
@@ -198,9 +198,9 @@ const TASKS = [
     defaultUnits={{ delays: "second", avgdelay: "second" }}
   />,
   <Task
-    title={"HTTP, Response Time"}
+    title={"HTTP/1.1, Response Time"}
     problem={
-      "If $PAYLOADS are sent from the server with an $RTT over $PARALLEL $RATE connections, it will take $TIMES ($AVGTIME)."
+      "If $PAYLOADS are sent from the server with an $RTT over $PARALLEL $RATE connections, the response times will be $TIMES respectively ($AVGTIME)."
     }
     vars={{
       payloads: "1kb,5kb,5kb,5kb,5kb,5kb,5kb,5kb,5kb",
