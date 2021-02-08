@@ -6,6 +6,13 @@ let isTruthy = (val) => {
   return ["y", "yes", "1", "enabled"].includes(val);
 };
 
+let qtyMax = (...qs) => {
+  let mx = qs.reduce((acc, cur) => {
+    return acc.div(cur).scalar >= 1 ? acc : cur;
+  });
+  return mx;
+};
+
 let parseIntList = (val) => {
   return val
     .split(",")
@@ -245,6 +252,59 @@ const TASKS = [
       },
     }}
     defaultUnits={{ times: "second", avgtime: "second" }}
+  />,
+  <Task
+    title={"File Distribution, Client-Server"}
+    problem={
+      "To send a $SIZE file from an $SRATE server to $N clients that can download at (minimum) $RATE, it will take at least $TIME."
+    }
+    vars={{
+      size: "100 Mbit",
+      srate: "200 Mbps",
+      n: "10",
+      rate: "10 Mbps",
+      time: null,
+    }}
+    calcs={{
+      time: ({ size, srate, n, rate }) => {
+        size = Qty(size);
+        srate = Qty(srate);
+        n = parseInt(n);
+        rate = Qty(rate);
+        let serverTime = size.div(srate).mul(n);
+        let clientTime = size.div(rate);
+        return qtyMax(serverTime, clientTime);
+      },
+    }}
+    defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"File Distribution, P2P"}
+    problem={
+      "To send a $SIZE file from an $SRATE server to $N clients that can download at (minimum) $DRATE and upload at $URATE, it will take at least $TIME."
+    }
+    vars={{
+      size: "100 Mbit",
+      srate: "200 Mbps",
+      n: "10",
+      drate: "10 Mbps",
+      urate: "1 Mbps",
+      time: null,
+    }}
+    calcs={{
+      time: ({ size, srate, n, drate, urate }) => {
+        size = Qty(size);
+        srate = Qty(srate);
+        n = parseInt(n);
+        drate = Qty(drate);
+        urate = Qty(urate);
+        let serverOneTime = size.div(srate);
+        let clientDownloadTime = size.div(drate);
+        let clientUploadTime = size.div(urate.mul(n).add(srate)).mul(n);
+        return qtyMax(serverOneTime, clientDownloadTime, clientUploadTime);
+      },
+    }}
+    defaultUnits={{ time: "second" }}
   />,
 ];
 
