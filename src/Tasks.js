@@ -226,8 +226,8 @@ const TASKS = [
         persistent = isTruthy(persistent);
         rate = Qty(rate);
         let times = [];
-        if (parallel !== 1) return "TODO";
         if (!persistent) {
+          if (parallel !== 1) return "TODO";
           let curTime = null;
           let i = 0;
           for (let p of payloads) {
@@ -240,6 +240,7 @@ const TASKS = [
             times[i++] = curTime;
           }
         } else {
+          if (parallel !== payloads.length) return "TODO";
           return "TODO";
         }
         return times;
@@ -302,6 +303,32 @@ const TASKS = [
         let clientDownloadTime = size.div(drate);
         let clientUploadTime = size.div(urate.mul(n).add(srate)).mul(n);
         return qtyMax(serverOneTime, clientDownloadTime, clientUploadTime);
+      },
+    }}
+    defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"Bloom Filter"}
+    problem={
+      "Given a Bloom filter with $N bits, $M elements in set S, and $K hash functions, $P is the prob. a bit is still zero after all insertions and $F is the prob. of FPs."
+    }
+    vars={{
+      n: "16",
+      m: "4",
+      k: "2",
+      p: null,
+      f: null,
+    }}
+    calcs={{
+      p: ({ n, m, k }) => {
+        n = parseInt(n);
+        m = parseInt(m);
+        k = parseInt(k);
+        return Math.pow(1 - 1 / n, k * m);
+      },
+      f: ({ n, m, k, calcs }) => {
+        let p = calcs.p({ n, m, k });
+        return Math.pow(1 - p, k);
       },
     }}
     defaultUnits={{ time: "second" }}
