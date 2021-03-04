@@ -26,7 +26,7 @@ let parseQtyList = (val) => {
 
 const TASKS = [
   <Task
-    title={"Transfer Speed"}
+    title={"Transmission Delay"}
     problem={
       "Transfering $SIZE of data over a $RATE connection will take $TIME."
     }
@@ -310,7 +310,7 @@ const TASKS = [
   <Task
     title={"Bloom Filter"}
     problem={
-      "Given a Bloom filter with $N bits, $M elements in set S, and $K hash functions, $P is the prob. a bit is still zero after all insertions and $F is the prob. of FPs."
+      "Given a Bloom filter with $N bits, $M elements in set S, and $K hash functions, $P is the prob. a bit is still zero after all insertions and $F is the prob. of FPs ($KBEST is optimal # of hash functions)."
     }
     vars={{
       n: "16",
@@ -318,6 +318,7 @@ const TASKS = [
       k: "2",
       p: null,
       f: null,
+      kbest: null,
     }}
     calcs={{
       p: ({ n, m, k }) => {
@@ -329,6 +330,73 @@ const TASKS = [
       f: ({ n, m, k, calcs }) => {
         let p = calcs.p({ n, m, k });
         return Math.pow(1 - p, k);
+      },
+      kbest: ({ n, m, calcs }) => {
+        let kfs = {};
+        for (let i = 1; i <= parseInt(n); i++) {
+          kfs[i] = calcs.f({ n, m, k: i, calcs: calcs });
+        }
+        console.log(kfs);
+        let best = Math.min(...Object.values(kfs));
+        console.log(best);
+        let bestK = Object.keys(kfs).find((k) => kfs[k] === best);
+        console.log(bestK);
+        return bestK;
+      },
+    }}
+    defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"Checksum"}
+    problem={"A checksum of $A and $B will be $CHECKSUM (their sum is $SUM)."}
+    vars={{
+      a: "1110011001100110",
+      b: "1101010101010101",
+      sum: null,
+      checksum: null,
+    }}
+    calcs={{
+      sum: ({ a, b }) => {
+        a = a.replace(/[^10]/g, "");
+        b = b.replace(/[^10]/g, "");
+        let sum = parseInt(a, 2) + parseInt(b, 2);
+        let sumBin = (sum >>> 0).toString(2);
+        if (sumBin.length > a.length) {
+          sumBin = ((sum + 1) >>> 0).toString(2).substring(1);
+        }
+        return sumBin;
+      },
+      checksum: ({ a, b, calcs }) => {
+        return [...calcs.sum({ a, b })]
+          .map((c) => (c === "1" ? "0" : "1"))
+          .join("");
+      },
+    }}
+    defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"RTD 3.0, Link Utilization"}
+    problem={
+      "Sending $SIZE packets over a $RATE/$RTT connection ($PARALLEL at the same time) will result in $LINKUTIL."
+    }
+    vars={{
+      size: "5000 bytes",
+      rate: "1 Mbps",
+      rtt: "400 ms",
+      parallel: "1",
+      linkutil: null,
+    }}
+    calcs={{
+      linkutil: ({ size, rate, rtt, parallel }) => {
+        size = Qty(size);
+        rate = Qty(rate);
+        rtt = Qty(rtt);
+        parallel = parseInt(parallel);
+        let result = size
+          .div(rate)
+          .mul(parallel)
+          .div(size.div(rate).mul(parallel).add(rtt));
+        return Math.floor(result.scalar * 10000) / 100 + "%";
       },
     }}
     defaultUnits={{ time: "second" }}
