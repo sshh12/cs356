@@ -392,10 +392,7 @@ const TASKS = [
         rate = Qty(rate);
         rtt = Qty(rtt);
         parallel = parseInt(parallel);
-        let result = size
-          .div(rate)
-          .mul(parallel)
-          .div(size.div(rate).mul(parallel).add(rtt));
+        let result = size.div(rate).mul(parallel).div(size.div(rate).add(rtt));
         return Math.floor(result.scalar * 10000) / 100 + "%";
       },
     }}
