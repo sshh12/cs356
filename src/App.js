@@ -18,8 +18,8 @@ function App() {
             lineHeight: "body",
           }}
         >
-          <Heading variant="display">CS356 Calculator</Heading>
-          <Text mb={4}>Math is hard.</Text>
+          <Heading variant="display">Networking Calculator</Heading>
+          <Text mb={4}>CS 356: Computer Networks (Spring 2021)</Text>
         </Box>
         <Box>{Tasks}</Box>
       </ThemeProvider>
