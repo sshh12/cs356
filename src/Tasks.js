@@ -24,6 +24,32 @@ let parseQtyList = (val) => {
   return val.split(",").map((v) => Qty(v));
 };
 
+let binCIDRtoDecCIDR = (binCIDR) => {
+  return binCIDR
+    .replaceAll(/(\d{8})/g, "$1.")
+    .split(".")
+    .splice(0, 4)
+    .map((v) => parseInt(v, 2))
+    .join(".");
+};
+
+let parseSubnetCIDR = (cidr) => {
+  cidr = cidr.trim();
+  let [ip, len] = cidr.split("/");
+  let ipParts = ip.split(".");
+  while (ipParts.length < 4) {
+    ipParts.push("0");
+  }
+  let bin = ipParts
+    .map((ipPart) => parseInt(ipPart).toString(2).padStart(8, "0"))
+    .join("");
+  return {
+    len: parseInt(len),
+    ip: ip,
+    bin: bin,
+  };
+};
+
 const TASKS = [
   <Task
     title={"Transmission Delay"}
@@ -336,11 +362,8 @@ const TASKS = [
         for (let i = 1; i <= parseInt(n); i++) {
           kfs[i] = calcs.f({ n, m, k: i, calcs: calcs });
         }
-        console.log(kfs);
         let best = Math.min(...Object.values(kfs));
-        console.log(best);
         let bestK = Object.keys(kfs).find((k) => kfs[k] === best);
-        console.log(bestK);
         return bestK;
       },
     }}
@@ -397,6 +420,42 @@ const TASKS = [
       },
     }}
     defaultUnits={{ time: "second" }}
+  />,
+  <Task
+    title={"IPv4, Subnets"}
+    problem={
+      "The subnet $SUBNET ($BINARY in binary) has up to $MAXHOSTS hosts from $MINIP to $MAXIP."
+    }
+    vars={{
+      subnet: "128.119.160/24",
+      binary: null,
+      maxhosts: null,
+      minip: null,
+      maxip: null,
+    }}
+    calcs={{
+      binary: ({ subnet }) => {
+        subnet = parseSubnetCIDR(subnet);
+        return subnet.bin.replaceAll(/(\d{8})/g, "$1.").substring(0, 35);
+      },
+      maxhosts: ({ subnet }) => {
+        subnet = parseSubnetCIDR(subnet);
+        return Math.pow(2, 32 - subnet.len);
+      },
+      maxip: ({ subnet }) => {
+        subnet = parseSubnetCIDR(subnet);
+        let maxBin =
+          subnet.bin.substring(0, subnet.len) + "1".repeat(32 - subnet.len);
+        return binCIDRtoDecCIDR(maxBin);
+      },
+      minip: ({ subnet }) => {
+        subnet = parseSubnetCIDR(subnet);
+        let maxBin =
+          subnet.bin.substring(0, subnet.len) + "0".repeat(32 - subnet.len);
+        return binCIDRtoDecCIDR(maxBin);
+      },
+    }}
+    defaultUnits={{}}
   />,
 ];
 
