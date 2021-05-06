@@ -1,6 +1,7 @@
 import Task from "./Task";
 import Qty from "js-quantities";
 import binpmf from "@stdlib/stats/base/dists/binomial/pmf";
+import bigInt from "big-integer";
 
 let isTruthy = (val) => {
   return ["y", "yes", "1", "enabled"].includes(val);
@@ -48,6 +49,10 @@ let parseSubnetCIDR = (cidr) => {
     ip: ip,
     bin: bin,
   };
+};
+
+let bigPowMod = (a, b, m) => {
+  return bigInt(a).pow(b).mod(m).valueOf();
 };
 
 const TASKS = [
@@ -453,6 +458,159 @@ const TASKS = [
         let maxBin =
           subnet.bin.substring(0, subnet.len) + "0".repeat(32 - subnet.len);
         return binCIDRtoDecCIDR(maxBin);
+      },
+    }}
+    defaultUnits={{}}
+  />,
+  <Task
+    title={"Security, Diffie–Hellman"}
+    problem={
+      "Given modulus $P, base $G, $APRIV, and $BPRIV, A will send $AMIX, B will send $BMIX, having shared secret $S."
+    }
+    vars={{
+      p: "23",
+      g: "5",
+      apriv: "4",
+      bpriv: "3",
+      amix: null,
+      bmix: null,
+      s: null,
+    }}
+    calcs={{
+      amix: ({ p, g, apriv }) => {
+        p = parseInt(p);
+        g = parseInt(g);
+        apriv = parseInt(apriv);
+        return bigPowMod(g, apriv, p);
+      },
+      bmix: ({ p, g, bpriv }) => {
+        p = parseInt(p);
+        g = parseInt(g);
+        bpriv = parseInt(bpriv);
+        return bigPowMod(g, bpriv, p);
+      },
+      s: ({ p, g, apriv, bpriv }) => {
+        p = parseInt(p);
+        g = parseInt(g);
+        apriv = parseInt(apriv);
+        bpriv = parseInt(bpriv);
+        let B = bigPowMod(g, bpriv, p);
+        return bigPowMod(B, bpriv, p);
+      },
+    }}
+    defaultUnits={{}}
+  />,
+  <Task
+    title={"Routing, Link Cost Change"}
+    problem={
+      "Given a 3-node network with edges $A, $B, and $C (changes to $C2) it will take $ITERS iterations to converge."
+    }
+    vars={{
+      a: "1",
+      b: "50",
+      c: "4",
+      c2: "60",
+      iters: null,
+    }}
+    calcs={{
+      iters: ({ a, b, c, c2 }) => {
+        [a, b, c, c2] = [parseInt(a), parseInt(b), parseInt(c), parseInt(c2)];
+        let yx = Math.min(c, a + b);
+        let yz = Math.min(a, c + b);
+        let zy = yz;
+        let zx = Math.min(b, a + c);
+        let prev = [yx, yz, zy, zx];
+        let i;
+        let cur;
+        for (i = 0; i < 10000; i++) {
+          yx = Math.min(c2, a + zx);
+          zx = Math.min(b, a + yx);
+          cur = [yx, yz, zy, zx];
+          // eslint-disable-next-line
+          if (prev.every((val, index) => val === cur[index])) {
+            break;
+          }
+          prev = [yx, yz, zy, zx];
+        }
+        return (i - 2) * 2;
+      },
+    }}
+    defaultUnits={{}}
+  />,
+  <Task
+    title={"Routing, Distance Table"}
+    problem={
+      "Given network $GRAPH, node $N, round $R, the distance table will look like $TABLE."
+    }
+    vars={{
+      graph: "ab1,ac5,bc3,be10,cd4,de2",
+      n: "c",
+      r: "1",
+      table: null,
+    }}
+    calcs={{
+      table: ({ graph, n, r }) => {
+        r = parseInt(r);
+        graph = graph.split(",").reduce((acc, cur) => {
+          let a = cur.charAt(0);
+          let b = cur.charAt(1);
+          let d = parseInt(cur.substring(2));
+          if (!(a in acc)) {
+            acc[a] = {};
+          }
+          if (!(b in acc)) {
+            acc[b] = {};
+          }
+          acc[a][b] = d;
+          acc[b][a] = d;
+          return acc;
+        }, {});
+        let verts = Object.keys(graph).sort();
+        let encodeDists = (dsts) => {
+          let e = "";
+          for (let v of verts) {
+            e +=
+              v +
+              "(" +
+              verts
+                .filter((v2) => v2 !== v)
+                // eslint-disable-next-line
+                .map((v2) => (!!dists[v][v2] ? v2 + "=" + dists[v][v2] : ""))
+                .join(",") +
+              ") ";
+          }
+          return e;
+        };
+        let dists = {};
+        for (let v1 of verts) {
+          dists[v1] = {};
+          for (let v2 of verts) {
+            if (v1 !== v2) {
+              dists[v1][v2] = Infinity;
+            }
+          }
+        }
+        if (r === 0) {
+          return encodeDists(dists);
+        }
+        for (let v2 of verts) {
+          if (graph[n][v2]) {
+            dists[n][v2] = graph[n][v2];
+          }
+        }
+        for (let rn = 1; rn < r; rn++) {
+          let k = verts[rn - 1];
+          for (let i of verts) {
+            for (let j of verts) {
+              dists[i][j] = Math.min(dists[i][j], graph[i][j]);
+              dists[i][j] = Math.min(
+                dists[i][j],
+                dists[i][k] + dists[k][j] || Infinity
+              );
+            }
+          }
+        }
+        return encodeDists(dists);
       },
     }}
     defaultUnits={{}}
